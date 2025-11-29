@@ -152,7 +152,76 @@ def extract_kart_objects(
         - is_center_kart: Boolean indicating if this is the kart closest to image center
     """
 
-    raise NotImplementedError("Not implemented")
+    with open(info_path) as f:
+        info = json.load(f)
+
+    detections = info.get("detections", [])
+    if view_index >= len(detections):
+        return []
+
+    view_dets = detections[view_index]
+    kart_list = []
+    scale_x = img_width / ORIGINAL_WIDTH
+    scale_y = img_height / ORIGINAL_HEIGHT
+
+    for det in view_dets:
+        if len(det) < 6:
+            continue
+        class_id, track_id, x1, y1, x2, y2 = det
+        class_id = int(class_id)
+        if class_id != 1: # karts
+            continue
+
+        # scale to size
+        x1s = x1 * scale_x
+        y1s = y1 * scale_y
+        x2s = x2 * scale_x
+        y2s = y2 * scale_y
+
+        # total calculations
+        w = x2s - x1s
+        h = y2s - y1s
+
+        if w < min_box_size or h< min_box_size:
+            continue
+
+        cx = x1s + w / 2.0
+        cy = y1s + h / 2.0
+
+        kart_name = f"Kart {track_id}"
+
+        kart_list.append(
+            {
+                "instance_id": int(track_id),
+                "kart_name": kart_name,
+                "center": (float(cx), float(cy)),
+                "bbox": [float(x1s), float(y1s), float(x2s), float(y2s)]
+            }
+        )
+
+    if not kart_list:
+        return []
+    img_cx = img_width / 2.0
+    img_cy = img_height / 2.0
+
+    min_dist = None
+    center_idx = 0
+    for i, k in enumerate(kart_list):
+        dx = k["center"][0] - img_cx
+        dy = k["center"][1] - img_cy
+        dist = (dx * dx + dy * dy) ** .5
+        if min_dist is None or dist < min_dist:
+            min_dist = dist
+            center_idx = i
+
+    for i, k in enumerate(kart_list):
+        k["is_center_kart"] = (i == center_idx)
+
+    return kart_list
+
+
+
+    # raise NotImplementedError("Not implemented")
 
 
 def extract_track_info(info_path: str) -> str:
@@ -166,7 +235,13 @@ def extract_track_info(info_path: str) -> str:
         Track name as a string
     """
 
-    raise NotImplementedError("Not implemented")
+    with open(info_path) as f:
+        info = json.load(f)
+
+    track_name = (info.get("track_name") or info.get("track") or info.get("map") or info.get("level")  or "unknown")
+    return str(track_name)
+
+    # raise NotImplementedError("Not implemented")
 
 
 def generate_qa_pairs(info_path: str, view_index: int, img_width: int = 150, img_height: int = 100) -> list:
@@ -202,7 +277,54 @@ def generate_qa_pairs(info_path: str, view_index: int, img_width: int = 150, img
     # How many karts are in front of the ego car?
     # How many karts are behind the ego car?
 
-    raise NotImplementedError("Not implemented")
+    qas = []
+    karts = extract_kart_objects(info_path, view_index, img_width = img_width, img_height = img_height)
+    track_name = extract_track_info(info_path)
+
+    if not karts:
+        qas.append({"question": "How many karts are visible?", "answer": "0"})
+        qas.append({"question": "Which track is this?", "answer": track_name})
+        return qas
+
+    # Ego kart identification
+    ego = next((k for k in karts if k.get("is_center_kart")), karts[0])
+    qas.append({"question": "Which kart is the ego car?", "answer": ego["kart_name"]})
+    # Total karts
+    qas.append({"question": "How many karts are in the scenario?", "answer": str(len(karts))})
+    # Track info
+    qas.append({"question": "What track is this?", "answer": track_name})
+
+    # Determine directions relative to ego
+    ex, ey = ego["center"]
+    other = [k for k in karts if k["instance_id"] != ego["instance_id"]]
+    for k in other:
+        # if k["instance_id"] == ego["instance_id"]:
+        #    continue
+        name = k["kart_name"]
+        x, y = k["center"]
+        # left/right x coordinates
+        lr = "left" if x < ex else "right"
+        # forward/back y height on image
+        fb = "in front of" if y < ey else "behind"
+        qas.append({"question": f"Is {name} to the left or right of the ego car?", "answer": lr})
+        qas.append({"question": f"Is {name} in front of or behind the ego car?", "answer": fb})
+        qas.append({"question": f"Where is {name} relative to the ego car?", "answer": f"{lr} and {fb}"})
+
+        # Counting left/right/front/back
+    left_count = sum(1 for k in karts if k["center"][0] < ex )
+    right_count = sum(1 for k in karts if k["center"][0] > ex )
+    front_count = sum(1 for k in karts if k["center"][1] < ey )
+    behind_count = sum(1 for k in karts if k["center"][1] > ey )
+
+    qas.append({"question": f"How many karts are to the left of the ego car?", "answer": str(left_count)})
+    qas.append({"question": f"How many karts are to the right of the ego car?", "answer": str(right_count)})
+    qas.append({"question": f"How many karts are in front of the ego car?", "answer": str(front_count)})
+    qas.append({"question": f"How many karts are behind the ego car?", "answer": str(behind_count)})
+
+    return qas
+
+
+    # raise NotImplementedError("Not implemented")
 
 
 def check_qa_pairs(info_file: str, view_index: int):
@@ -254,3 +376,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
