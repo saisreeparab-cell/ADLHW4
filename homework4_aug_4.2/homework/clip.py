@@ -6,6 +6,8 @@ import torch.nn as nn
 import torchvision as tv
 from peft import LoraConfig, TaskType, get_peft_model
 from PIL import Image
+from tensorboard.plugins.image.summary import image
+from torch.linalg import vector_norm
 from torch.utils.data import Dataset
 from torch.utils.tensorboard import SummaryWriter
 from transformers import AutoProcessor, Trainer, TrainingArguments
@@ -102,7 +104,17 @@ class CLIP(nn.Module):
         self.vision_encoder = vision_encoder
         self.text_encoder = text_encoder
         # TODO: implement the rest components
-        raise NotImplementedError("Not implemented")
+        # vdim = 1024
+        # tdim = 768
+        vdim =  getattr(vision_encoder, "hidden_size", None)
+        tdim = getattr(text_encoder, "hidden_size", None)
+        self.vision_proj = nn.Linear(vdim, proj_dim)
+        self.text_proj = nn.Linear(tdim, proj_dim)
+        self.vision_ln = nn.LayerNorm(proj_dim)
+        self.text_ln = nn.LayerNorm(proj_dim)
+        # logit scale
+        self.logit_scale = nn.Parameter(torch.tensor(1.0 / temperature).log())
+        # raise NotImplementedError("Not implemented")
 
     def encode_image(self, image: torch.Tensor) -> torch.Tensor:
         return self.vision_encoder(image)
@@ -180,7 +192,18 @@ class CLIP(nn.Module):
         Returns:
             TODO: think about the what values should be returned
         """
-        raise NotImplementedError("Not implemented")
+
+        # encode
+        image_feature = self.encode_image(pixel_values)
+        text_feature = self.encode_text(input_ids, attention_mask)
+
+        # similarity logits
+        logits_scale = self.logits_scale.exp()
+        logits = logits_scale * image_feature @ text_feature.T
+
+        return image_feature, text_feature, logits
+
+        # raise NotImplementedError("Not implemented")
 
 
 def compute_clip_loss(
@@ -199,7 +222,17 @@ def compute_clip_loss(
     Returns:
         The loss for the CLIP model.
     """
-    raise NotImplementedError("Not implemented")
+    image_features, text_features, logits = outputs
+    batch_size = image_features.shape[0]
+    device = logits.device
+
+    target = torch.arange(batch_size, device = device)
+
+    loss_i2t = torch.nn.functional.cross_entropy(logits, target)
+    loss_t2i = torch.nn.functional.cross_entropy(logits.T,target)
+
+    return (loss_i2t + loss_t2i) / 2.0
+    # raise NotImplementedError("Not implemented")
 
 
 def get_target_modules_for_lora(model: nn.Module) -> list[str]:
