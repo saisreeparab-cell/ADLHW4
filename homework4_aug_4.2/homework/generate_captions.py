@@ -3,7 +3,7 @@ from pathlib import Path
 import fire
 from matplotlib import pyplot as plt
 
-from .generate_qa import draw_detections, extract_frame_info
+from .generate_qa import draw_detections, extract_frame_info, extract_kart_objects, extract_track_info
 
 
 def generate_caption(info_path: str, view_index: int, img_width: int = 150, img_height: int = 100) -> list:
@@ -22,7 +22,31 @@ def generate_caption(info_path: str, view_index: int, img_width: int = 150, img_
     # 4. Relative position
     # {kart_name} is {position} of the ego car.
 
-    raise NotImplementedError("Not implemented")
+    karts = extract_kart_objects(info_path, view_index, img_width = img_width, img_height = img_height)
+    track = extract_track_info(info_path)
+
+    captions = []
+
+    if not karts:
+        captions.append(f"A scene on the {track} track with no visible karts.")
+        return captions
+    # find ego
+    ego = next((k for k in karts if k.get("is_center_kart")), karts[0])
+    captions.append(f"{ego['kart_name']} is the ego car on the {track} track. " f"There are {len(karts)} karts visible.")
+
+    other = [k for k in karts if k["instance_id"] != ego["instance_id"]]
+    ex, ey = ego["center"]
+    for o in other[:2]:
+        # determine position word
+        #ex, ey = ego["center"]
+        ox, oy = o["center"]
+        lr = "left" if ox < ex else "right"
+        fb = "in front of" if oy < ey else "behind"
+        captions.append(f"{o['kart_name']} is {lr} and {fb} the ego car.")
+
+    return captions
+
+    # raise NotImplementedError("Not implemented")
 
 
 def check_caption(info_file: str, view_index: int):
@@ -57,7 +81,10 @@ You probably need to add additional commands to Fire below.
 
 def main():
     fire.Fire({"check": check_caption})
+    # fire.Fire({"info_file": info_file})
+    # fire.Fire({"view_index": view_index})
 
 
 if __name__ == "__main__":
     main()
+
