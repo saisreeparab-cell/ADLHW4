@@ -106,8 +106,10 @@ class CLIP(nn.Module):
         # TODO: implement the rest components
         # vdim = 1024
         # tdim = 768
-        vdim =  getattr(vision_encoder, "hidden_size", None)
-        tdim = getattr(text_encoder, "hidden_size", None)
+        vc =  getattr(vision_encoder, "config", None)
+        tc = getattr(text_encoder, "config", None)
+        vdim =  getattr(vc, "hidden_size", None)
+        tdim = getattr(tc, "hidden_size", None)
         self.vision_proj = nn.Linear(vdim, proj_dim)
         self.text_proj = nn.Linear(tdim, proj_dim)
         self.vision_ln = nn.LayerNorm(proj_dim)
