@@ -159,6 +159,8 @@ def extract_kart_objects(
     if view_index >= len(detections):
         return []
 
+    kart_name_list = info.get("karts", None)
+
     view_dets = detections[view_index]
     kart_list = []
     scale_x = img_width / ORIGINAL_WIDTH
@@ -169,6 +171,7 @@ def extract_kart_objects(
             continue
         class_id, track_id, x1, y1, x2, y2 = det
         class_id = int(class_id)
+        track_id = int(track_id)
         if class_id != 1: # karts
             continue
 
@@ -188,7 +191,10 @@ def extract_kart_objects(
         cx = x1s + w / 2.0
         cy = y1s + h / 2.0
 
-        kart_name = f"Kart {track_id}"
+        if kart_name_list is not None and 0 <= track_it < len(kart_name_list):
+            kart_name = str(kart_name_list[track_id]
+        else:
+            kart_name = f"kart_{track_id}"
 
         kart_list.append(
             {
