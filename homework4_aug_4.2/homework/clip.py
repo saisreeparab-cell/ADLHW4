@@ -30,6 +30,27 @@ def load(model_name: str = "clip_model"):
     vlm = BaseVLM()
     vision_encoder = vlm.model.model.vision_model
     text_encoder = vlm.model.model.text_model
+
+    base_clip = CLIP(vision_encoder, text_encoder)
+
+ 
+    base_clip.load_pretrained(model_path)
+
+
+    peft_clip = PeftModel.from_pretrained(base_clip, model_path).to(device)
+    peft_clip.eval()
+    if device == "cuda":
+        peft_clip = peft_clip.to(dtype=torch.bfloat16)
+
+    class CLIPWrapper:
+        def __init__(self, model: nn.Module):
+            self.model = model
+
+    return CLIPWrapper(peft_clip)
+
+
+
+    """
     clip = CLIP(vision_encoder, text_encoder)
     clip = PeftModel.from_pretrained(clip, model_path).to(device)
 
@@ -38,7 +59,7 @@ def load(model_name: str = "clip_model"):
     if device == "cuda":
         clip = clip.to(dtype=torch.bfloat16)
 
-    return clip
+    return clip"""
 
 
 def clip_data_collator(features: list[dict[str, torch.Tensor]]) -> dict[str, torch.Tensor]:
