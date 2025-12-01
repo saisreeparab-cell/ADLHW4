@@ -192,7 +192,7 @@ def extract_kart_objects(
         cy = y1s + h / 2.0
 
         if kart_name_list is not None and 0 <= track_it < len(kart_name_list):
-            kart_name = str(kart_name_list[track_id]
+            kart_name = str(kart_name_list[track_id])
         else:
             kart_name = f"kart_{track_id}"
 
