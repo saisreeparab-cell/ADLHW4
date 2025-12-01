@@ -375,9 +375,54 @@ Usage Example: Visualize QA pairs for a specific file and view:
 You probably need to add additional commands to Fire below.
 """
 
+def build_train(split: str = "train"):
+    """
+    Build a *_qa_pairs.json file for a split (default: train).
 
+    It will:
+      - loop over data/<split>/*_info.json
+      - call generate_qa_pairs(...) for each view
+      - write data/<split>/tux_qa_pairs.json with
+        {"image_file", "question", "answer"} entries,
+        which VQADataset(split) expects.
+    """
+    base_data_dir = Path(__file__).parent.parent / "data"
+    info_dir = base_data_dir / split
+    out_file = info_dir / "tux_qa_pairs.json"
+
+    all_qas = []
+
+    for info_path in sorted(info_dir.glob("*_info.json")):
+        with open(info_path) as f:
+            info = json.load(f)
+
+        num_views = len(info["detections"])
+        base_name = info_path.stem.replace("_info", "")
+
+        for view_index in range(num_views):
+            qa_pairs = generate_qa_pairs(str(info_path), view_index)
+
+            # This must be RELATIVE to data/ (matches data.VQADataset)
+            image_file = f"{split}/{base_name}_{view_index:02d}_im.jpg"
+
+            for qa in qa_pairs:
+                all_qas.append(
+                    {
+                        "image_file": image_file,
+                        "question": qa["question"],
+                        "answer": qa["answer"],
+                    }
+                )
+
+    print(f"Total QA pairs for split '{split}': {len(all_qas)}")
+    with open(out_file, "w") as f:
+        json.dump(all_qas, f, indent=2)
+    print(f"Saved to {out_file}")
+
+ 
 def main():
-    fire.Fire({"check": check_qa_pairs})
+    fire.Fire({"check": check_qa_pairs,
+              "build_train": build_train})
 
 
 if __name__ == "__main__":
