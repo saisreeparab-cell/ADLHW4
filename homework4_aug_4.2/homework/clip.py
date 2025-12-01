@@ -108,8 +108,8 @@ class CLIP(nn.Module):
         # tdim = 768
         vc =  getattr(vision_encoder, "config", None)
         tc = getattr(text_encoder, "config", None)
-        vdim =  getattr(vc, "hidden_size", None)
-        tdim = getattr(tc, "hidden_size", None)
+        vdim =  getattr(vc, "hidden_size", 1024)
+        tdim = getattr(tc, "hidden_size", 768)
         self.vision_proj = nn.Linear(vdim, proj_dim)
         self.text_proj = nn.Linear(tdim, proj_dim)
         self.vision_ln = nn.LayerNorm(proj_dim)
@@ -120,19 +120,19 @@ class CLIP(nn.Module):
 
     def encode_image(self, pixel_values: torch.Tensor) -> torch.Tensor:
         vision_outputs = self.vision_encoder(pixel_values = pixel_values)
-        if hasattr(vision_outputs, "pooler_output") and vision_output.pooler_output is not None:
-            img_embeds = vision_output.pooler_output
+        if hasattr(vision_outputs, "pooler_output") and vision_outputs.pooler_output is not None:
+            img_embeds = vision_outputs.pooler_output
         else: 
             img_embeds = vision_outputs.last_hidden_state[:, 0]
         img_embeds = self.vision_proj(img_embeds)
         img_embeds = self.vision_ln(img_embeds)
         return img_embeds
 
-    def encode_text(self, input_ids: str, attention_mask: torch.Tensor | None = None) -> torch.Tensor:
+    def encode_text(self, input_ids: torch.tensor, attention_mask: torch.Tensor | None = None) -> torch.Tensor:
         text_outputs = self.text_encoder(
         input_ids = input_ids, attention_mask = attention_mask)
-        if hasattr(text_outputs, "pooler_output") and text_output.pooler_output is not None:
-            txt_embeds = text_output.pooler_output
+        if hasattr(text_outputs, "pooler_outputs") and text_outputs.pooler_output is not None:
+            txt_embeds = text_outputs.pooler_output
         else: 
             txt_embeds = text_outputs.last_hidden_state[:, 0]
         txt_embeds = self.text_proj(txt_embeds)
@@ -215,7 +215,7 @@ class CLIP(nn.Module):
         text_feature = self.encode_text(input_ids, attention_mask)
 
         # similarity logits
-        logits_scale = self.logits_scale.exp()
+        logits_scale = self.logit_scale.exp()
         logits = logits_scale * image_feature @ text_feature.T
 
         return image_feature, text_feature, logits
