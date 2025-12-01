@@ -376,16 +376,7 @@ You probably need to add additional commands to Fire below.
 """
 
 def build_train(split: str = "train"):
-    """
-    Build a *_qa_pairs.json file for a split (default: train).
-
-    It will:
-      - loop over data/<split>/*_info.json
-      - call generate_qa_pairs(...) for each view
-      - write data/<split>/tux_qa_pairs.json with
-        {"image_file", "question", "answer"} entries,
-        which VQADataset(split) expects.
-    """
+    
     base_data_dir = Path(__file__).parent.parent / "data"
     info_dir = base_data_dir / split
     out_file = info_dir / "tux_qa_pairs.json"
