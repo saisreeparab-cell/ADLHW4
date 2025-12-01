@@ -351,7 +351,8 @@ def train(
 
 def demo_train():
     train(
-        train_dataset_name="train_demo",
+        data_dir = None,
+        #train_dataset_name="demo_clip",
         output_dir="demo_clip",
         num_train_epochs=1,
         per_device_train_batch_size=2,
