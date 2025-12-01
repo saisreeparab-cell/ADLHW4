@@ -311,7 +311,7 @@ def generate_qa_pairs(info_path: str, view_index: int, img_width: int = 150, img
         # left/right x coordinates
         lr = "left" if x < ex else "right"
         # forward/back y height on image
-        fb = "in front of" if y < ey else "behind"
+        fb = "front" if y < ey else "back"
         qas.append({"question": f"Is {name} to the left or right of the ego car?", "answer": lr})
         qas.append({"question": f"Is {name} in front of or behind the ego car?", "answer": fb})
         qas.append({"question": f"Where is {name} relative to the ego car?", "answer": f"{lr} and {fb}"})
