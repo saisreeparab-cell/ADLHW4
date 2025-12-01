@@ -128,10 +128,10 @@ class CLIP(nn.Module):
         img_embeds = self.vision_ln(img_embeds)
         return img_embeds
 
-    def encode_text(self, input_ids: torch.tensor, attention_mask: torch.Tensor | None = None) -> torch.Tensor:
+    def encode_text(self, input_ids: torch.Tensor, attention_mask: torch.Tensor | None = None) -> torch.Tensor:
         text_outputs = self.text_encoder(
         input_ids = input_ids, attention_mask = attention_mask)
-        if hasattr(text_outputs, "pooler_outputs") and text_outputs.pooler_output is not None:
+        if hasattr(text_outputs, "pooler_output") and text_outputs.pooler_output is not None:
             txt_embeds = text_outputs.pooler_output
         else: 
             txt_embeds = text_outputs.last_hidden_state[:, 0]
