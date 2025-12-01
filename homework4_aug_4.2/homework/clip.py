@@ -119,10 +119,25 @@ class CLIP(nn.Module):
         # raise NotImplementedError("Not implemented")
 
     def encode_image(self, image: torch.Tensor) -> torch.Tensor:
-        return self.vision_encoder(image)
+        vision_outputs - self.vision_encoder(pixel_values = image)
+        if hasattr(vision_outputs, "pooler_outpout") and vision_outputs.pooler_output is not None:
+            img_embeds = vision_output.pooler_output
+        else: 
+            img_embeds = vision_outputs.last_hidden_state[:, 0]
+        img_embeds = self.vision_proj(img_embeds)
+        img_embeds = self.vision_ln(img_embeds)
+        return img_embeds
 
-    def encode_text(self, text: str) -> torch.Tensor:
-        return self.text_encoder(text)
+    def encode_text(self, text: str, attention_mask: torch.Tensor | None = None) -> torch.Tensor:
+        text_outputs = self.text_encoder(
+        text = text, attention_mask = attention_mask)
+        if hasattr(text_outputs, "pooler_outpout") and text_outputs.pooler_output is not None:
+            txt_embeds = text_output.pooler_output
+        else: 
+            txt_embeds = text_outputs.last_hidden_state[:, 0]
+        txt_embeds = self.text_proj(txt_embeds)
+        txt_embeds = self.text_ln(yxy_embeds)
+        return txt_embeds
 
     def save_pretrained(self, save_directory: str, **kwargs):
         """Customize save method, save additional parameters"""
