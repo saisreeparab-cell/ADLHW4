@@ -118,9 +118,9 @@ class CLIP(nn.Module):
         self.logit_scale = nn.Parameter(torch.tensor(1.0 / temperature).log())
         # raise NotImplementedError("Not implemented")
 
-    def encode_image(self, image: torch.Tensor) -> torch.Tensor:
-        vision_outputs - self.vision_encoder(pixel_values = image)
-        if hasattr(vision_outputs, "pooler_outpout") and vision_outputs.pooler_output is not None:
+    def encode_image(self, pixel_values: torch.Tensor) -> torch.Tensor:
+        vision_outputs = self.vision_encoder(pixel_values = pixel_values)
+        if hasattr(vision_outputs, "pooler_output") and vision_output.pooler_output is not None:
             img_embeds = vision_output.pooler_output
         else: 
             img_embeds = vision_outputs.last_hidden_state[:, 0]
@@ -128,15 +128,15 @@ class CLIP(nn.Module):
         img_embeds = self.vision_ln(img_embeds)
         return img_embeds
 
-    def encode_text(self, text: str, attention_mask: torch.Tensor | None = None) -> torch.Tensor:
+    def encode_text(self, input_ids: str, attention_mask: torch.Tensor | None = None) -> torch.Tensor:
         text_outputs = self.text_encoder(
-        text = text, attention_mask = attention_mask)
-        if hasattr(text_outputs, "pooler_outpout") and text_outputs.pooler_output is not None:
+        input_ids = input_ids, attention_mask = attention_mask)
+        if hasattr(text_outputs, "pooler_output") and text_output.pooler_output is not None:
             txt_embeds = text_output.pooler_output
         else: 
             txt_embeds = text_outputs.last_hidden_state[:, 0]
         txt_embeds = self.text_proj(txt_embeds)
-        txt_embeds = self.text_ln(yxy_embeds)
+        txt_embeds = self.text_ln(txt_embeds)
         return txt_embeds
 
     def save_pretrained(self, save_directory: str, **kwargs):
