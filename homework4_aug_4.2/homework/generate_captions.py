@@ -1,5 +1,5 @@
 from pathlib import Path
-
+import json
 import fire
 from matplotlib import pyplot as plt
 
@@ -41,7 +41,7 @@ def generate_caption(info_path: str, view_index: int, img_width: int = 150, img_
         #ex, ey = ego["center"]
         ox, oy = o["center"]
         lr = "left" if ox < ex else "right"
-        fb = "in front of" if oy < ey else "behind"
+        fb = "front" if oy < ey else "back"
         captions.append(f"{o['kart_name']} is {lr} and {fb} the ego car.")
 
     return captions
@@ -78,11 +78,48 @@ Usage Example: Visualize QA pairs for a specific file and view:
 You probably need to add additional commands to Fire below.
 """
 
+def build_train(split: str = "train"):
+   
+    base_data_dir = Path(__file__).parent.parent / "data"
+    info_dir = base_data_dir / split
+    out_file = info_dir / "tux_captions.json"
+
+    all_caps = []
+
+    for info_path in sorted(info_dir.glob("*_info.json")):
+        with open(info_path) as f:
+            info = json.load(f)
+
+        num_views = len(info["detections"])
+        base_name = info_path.stem.replace("_info", "")
+
+        for view_index in range(num_views):
+            captions = generate_caption(str(info_path), view_index)
+
+            # Same convention as QA: RELATIVE to data/
+            image_file = f"{split}/{base_name}_{view_index:02d}_im.jpg"
+
+            for cap in captions:
+                all_caps.append(
+                    {
+                        "image_file": image_file,
+                        "caption": cap,
+                    }
+                )
+
+    print(f"Total caption pairs for split '{split}': {len(all_caps)}")
+    with open(out_file, "w") as f:
+        json.dump(all_caps, f, indent=2)
+    print(f"Saved to {out_file}")
+
 
 def main():
-    fire.Fire({"check": check_caption})
-    # fire.Fire({"info_file": info_file})
-    # fire.Fire({"view_index": view_index})
+    fire.Fire(
+        {
+            "check": check_caption,
+            "build_train": build_train,
+        }
+    )
 
 
 if __name__ == "__main__":
